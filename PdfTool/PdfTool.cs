@@ -15,6 +15,7 @@ namespace PdfTool
     public partial class PDFTool : Form
     {
         private string LastFile { get; set; }
+        private string TempFilename = Environment.CurrentDirectory + @"\ExportedPDF_Temp.pdf";
         public PDFTool()
         {
             InitializeComponent();
@@ -22,34 +23,27 @@ namespace PdfTool
 
         private void genetePdfBtn_Click(object sender, EventArgs e)
         {
-            var bytes = Base64Util.GetBase64(base64Txt.Text);
+            var bytes = ConvertBase64();
 
-            if (bytes == null || bytes.Count() == 0)
-            {
-                MessageBox.Show("Base 64 invalid", "Error");
-
-                return;
-            }
+            if (bytes == null) return;
 
             var sf = ControlFactory.CreatePdfSaveDialog();
 
             if (sf.ShowDialog() == DialogResult.OK)
             {
-                if (!FileUtil.CreateFile(bytes, sf.FileName, FileMode.Create))
-                {
-                    MessageBox.Show("Error while creating file", "Error");
-                }
-                else
+                if (CreateFile(bytes, sf.FileName))
                 {
                     LastFile = FileUtil.GetFileFolderDirectoryFromFullPath(sf.FileName, ".pdf");
                     openContainingBtn.Enabled = true;
-                    browser.Navigate(sf.FileName + "#toolbar=0&navpanes=0");
-                }                  
+                    OpenPdf(sf.FileName);
+                }              
             }
         }
 
         private void exitBtn_Click(object sender, EventArgs e)
         {
+            browser.Dispose();
+            FileUtil.Delete(TempFilename);
             Environment.Exit(0);
         }
 
@@ -59,39 +53,65 @@ namespace PdfTool
                  Process.Start(LastFile);
         }
 
-        private void printBtn_Click(object sender, EventArgs e)
+        private void previewtBtn_Click(object sender, EventArgs e)
         {
-            var tempDir = Environment.CurrentDirectory + @"\ExportedPDF_Temp.pdf";
+            var bytes = ConvertBase64();
 
+            if (bytes == null) return;
+
+            if (CreateFile(bytes, TempFilename))
+            {
+                OpenPdf(TempFilename);
+                previewBtn.Enabled = false;
+            }   
+        }
+
+        private void PDFTool_Load(object sender, EventArgs e)
+        {
+            base64Txt.TextChanged += ClearBrowserEvent;
+        }
+
+        private void ClearBrowserEvent(object sender, EventArgs e)
+        {
+            ClearBrowser();
+        }
+
+        private void ClearBrowser()
+        {
+            browser.Navigate("about:blank");
+            previewBtn.Enabled = true;
+            openContainingBtn.Enabled = false;
+        }
+
+        private void OpenPdf(string filename)
+        {
+            browser.Navigate(filename + "#toolbar=0&navpanes=0");
+        }
+
+        private byte[] ConvertBase64()
+        {
             var bytes = Base64Util.GetBase64(base64Txt.Text);
 
             if (bytes == null || bytes.Count() == 0)
             {
                 MessageBox.Show("Base 64 invalid", "Error");
-                return;
+                return null;
             }
 
-            if (!FileUtil.CreateFile(bytes, tempDir , FileMode.Create))
+            return bytes;
+        }
+
+        private bool CreateFile(byte[] bytes, string filename)
+        {
+            if (!FileUtil.CreateFile(bytes, filename, FileMode.Create))
             {
                 MessageBox.Show("Error while creating file", "Error");
+                return false;
             }
             else
             {
-                browser.Navigate(tempDir + "#toolbar=0&navpanes=0");
-                previewBtn.Enabled = false;
-            }       
-        }
-
-        private void PDFTool_Load(object sender, EventArgs e)
-        {
-            base64Txt.TextChanged += ClearBrowser;
-        }
-
-        private void ClearBrowser(object sender, EventArgs e)
-        {
-            browser.Navigate("about:blank");
-            previewBtn.Enabled = true;
-            openContainingBtn.Enabled = false;
+                return true;
+            }
         }
     }
 }

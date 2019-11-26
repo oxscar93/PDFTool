@@ -110,7 +110,7 @@
             this.previewBtn.TabIndex = 7;
             this.previewBtn.Text = "Preview";
             this.previewBtn.UseVisualStyleBackColor = true;
-            this.previewBtn.Click += new System.EventHandler(this.printBtn_Click);
+            this.previewBtn.Click += new System.EventHandler(this.previewtBtn_Click);
             // 
             // PDFTool
             // 
